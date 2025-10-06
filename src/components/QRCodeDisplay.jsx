@@ -34,7 +34,7 @@ const QRCodeDisplay = ({ deposit, encryptionKey, iv }) => {
                         Scannez pour télécharger le fichier
                     </p>
                     <div className="flex justify-center">
-                        <QRCode 
+                        <QRCodeSVG 
                             value={JSON.stringify(shareData)}
                             size={200}
                             level="M"
@@ -54,7 +54,7 @@ const QRCodeDisplay = ({ deposit, encryptionKey, iv }) => {
                         Scannez pour gérer le dépôt
                     </p>
                     <div className="flex justify-center">
-                        <QRCode 
+                        <QRCodeSVG 
                             value={JSON.stringify(manageData)}
                             size={200}
                             level="M"
