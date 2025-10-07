@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import crypto from '../services/cryptoService';
 import api from '../services/ApiService';
 import QRCodeDisplay from './QRCodeDisplay';
+import ManageInterface from './ManageInterface';
 
 const SecureUpload = () => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -138,6 +139,13 @@ const SecureUpload = () => {
                         encryptionKey={uploadResult.encryptionKey}
                         iv={uploadResult.iv}
                     />
+
+// Dans le return, après les QR codes, ajoutez :
+{uploadResult && (
+  <div style={{ marginTop: "20px" }}>
+    <ManageInterface manageToken={uploadResult.deposit.manageToken} />
+  </div>
+)}
                 </div>
             )}
         </div>

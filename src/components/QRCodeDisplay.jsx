@@ -9,7 +9,7 @@ const QRCodeDisplay = ({ deposit, encryptionKey, iv }) => {
         key: encryptionKey,
         iv: iv,
         fileName: deposit.fileName,
-        downloadUrl: `${window.location.origin}/download/${deposit.shareToken}`
+        downloadUrl: `http://localhost:8080/api/v1/files/download/${deposit.shareToken}`
     };
 
     // Données pour le QR Code de gestion
