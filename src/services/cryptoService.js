@@ -1,6 +1,6 @@
 class CryptoService {
     /**
-     * Génère une clé de chiffrement AES-GCM 256 bits
+     * 🔐 Génère une clé AES-GCM 256 bits
      */
     async generateKey() {
         return await window.crypto.subtle.generateKey(
@@ -8,24 +8,24 @@ class CryptoService {
                 name: 'AES-GCM',
                 length: 256,
             },
-            true, // extractable pour permettre l'export vers QR code
+            true, // ✅ extractable : pour pouvoir l'exporter dans le QR code
             ['encrypt', 'decrypt']
         );
     }
 
     /**
-     * Chiffre un fichier avec AES-GCM
+     * 📁 Chiffre un fichier avec AES-GCM
      */
     async encryptFile(file) {
-        // ✅ Générer la clé et l'IV côté client uniquement
+        // ✅ Générer la clé et l’IV côté client uniquement
         const key = await this.generateKey();
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        
+
         // Lire le fichier comme ArrayBuffer
         const fileBuffer = await file.arrayBuffer();
-        
+
         // Chiffrer les données
-        const encryptedData = await window.crypto.subtle.encrypt(
+        const encryptedBuffer = await window.crypto.subtle.encrypt(
             {
                 name: 'AES-GCM',
                 iv: iv,
@@ -34,23 +34,21 @@ class CryptoService {
             fileBuffer
         );
 
-        // Créer un nouveau fichier chiffré
+        // ✅ Utiliser un Blob pur (évite les corruptions)
         const encryptedFile = new File(
-            [encryptedData], 
-            `encrypted_${file.name}`, 
+            [encryptedBuffer],
+            `encrypted_${file.name}`,
             { type: 'application/octet-stream' }
         );
-
-        // ✅ Retourner TOUT ce qui est nécessaire pour le déchiffrement
-        return { 
-            encryptedFile, 
-            key, // À exporter pour le QR code
-            iv   // À inclure dans le QR code
+        return {
+           encryptedFile,
+            key,
+            iv
         };
     }
 
     /**
-     * Exporte la clé en base64 pour le QR code
+     * 📤 Exporte une clé au format base64 pour le QR code
      */
     async exportKey(key) {
         const exported = await window.crypto.subtle.exportKey('raw', key);
@@ -59,26 +57,31 @@ class CryptoService {
     }
 
     /**
-     * Déchiffre un fichier (pour le téléchargement)
+     * 🔓 Déchiffre un fichier téléchargé
      */
-    async decryptFile(encryptedData, keyBase64, ivBase64) {
+    async decryptFile(encryptedBuffer, keyBase64, ivBase64) {
         const key = await this.importKey(keyBase64);
         const iv = this.base64ToUint8Array(ivBase64);
-        
-        const decryptedData = await window.crypto.subtle.decrypt(
-            {
-                name: 'AES-GCM',
-                iv: iv,
-            },
-            key,
-            encryptedData
-        );
-        
-        return decryptedData;
+
+        try {
+            const decryptedBuffer = await window.crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: iv,
+                },
+                key,
+                encryptedBuffer
+            );
+
+            return decryptedBuffer;
+        } catch (e) {
+            console.error('❌ Erreur de déchiffrement (clé ou iv incorrects)', e);
+            throw new Error('Erreur de déchiffrement : la clé ou l’IV est invalide');
+        }
     }
 
     /**
-     * Importe une clé depuis base64 (pour le déchiffrement)
+     * 🔑 Importe une clé depuis une chaîne base64
      */
     async importKey(base64Key) {
         const keyData = this.base64ToArrayBuffer(base64Key);
@@ -91,7 +94,7 @@ class CryptoService {
         );
     }
 
-    // Méthodes utilitaires (inchangées)
+    // 📦 Méthodes utilitaires
     arrayBufferToBase64(buffer) {
         let binary = '';
         const bytes = new Uint8Array(buffer);

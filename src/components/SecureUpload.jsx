@@ -139,8 +139,7 @@ const SecureUpload = () => {
                         encryptionKey={uploadResult.encryptionKey}
                         iv={uploadResult.iv}
                     />
-
-// Dans le return, après les QR codes, ajoutez :
+{/* Dans le return, après les QR codes, ajoutez :*/}
 {uploadResult && (
   <div style={{ marginTop: "20px" }}>
     <ManageInterface manageToken={uploadResult.deposit.manageToken} />

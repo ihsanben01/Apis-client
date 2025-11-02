@@ -1,97 +1,84 @@
-import React, { useState } from 'react';
-import crypto from '../services/cryptoService';
+import React, { useState } from "react";
+import { QrReader } from "react-qr-reader";
+import crypto from "../services/cryptoService";
 
 const FileDownloader = () => {
-    const [qrData, setQrData] = useState('');
+    const [qrData, setQrData] = useState(null);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError] = useState("");
 
-    const handleQrScan = (scannedData) => {
+    // ✅ Étape 1: Fonction appelée dès qu’un QR est scanné
+    const handleQrScan = async (result) => {
+        if (!result) return;
+
         try {
-            const data = JSON.parse(scannedData);
-            if (data.type === 'SHARE') {
-                setQrData(data);
-                setError('');
-            } else {
-                setError('QR code invalide - utilisez un QR code de partage');
-            }
+            const data = JSON.parse(result?.text || result);
+            console.log("✅ QR code scanné:", data);
+
+            setQrData(data);
+            setError("");
+
+            // Appel automatique du téléchargement et déchiffrement
+            await downloadAndDecrypt(data);
         } catch (err) {
-            setError('QR code invalide');
+            console.error("QR invalide:", err);
+            setError("QR code invalide");
         }
     };
 
-    const downloadAndDecrypt = async () => {
-        if (!qrData) return;
-
+    // ✅ Étape 2: Télécharger et déchiffrer le fichier
+    const downloadAndDecrypt = async (data) => {
         setIsDownloading(true);
-        setError('');
-
         try {
-            // ✅ Étape 1: Télécharger les données chiffrées
-            const encryptedBlob = await downloadEncryptedFile(qrData.downloadUrl);
-            
-            // ✅ Étape 2: Déchiffrer côté client avec la clé du QR code
-            const encryptedData = await encryptedBlob.arrayBuffer();
-            const decryptedData = await crypto.decryptFile(
-                encryptedData,
-                qrData.key,
-                qrData.iv
+            const response = await fetch(data.downloadUrl);
+            if (!response.ok) throw new Error("Erreur de téléchargement");
+
+            const encryptedBuffer = await response.arrayBuffer();
+
+            // Déchiffrement avec la clé et IV du QR
+            const decrypted = await crypto.decryptFile(
+                encryptedBuffer,
+                data.key,
+                data.iv
             );
-            
-            // ✅ Étape 3: Créer et télécharger le fichier déchiffré
-            const decryptedBlob = new Blob([decryptedData]);
-            const url = URL.createObjectURL(decryptedBlob);
-            const a = document.createElement('a');
+
+            const blob = new Blob([decrypted]);
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
             a.href = url;
-            a.download = qrData.fileName;
+            a.download = data.fileName || "fichier_déchiffré";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
         } catch (err) {
-            setError(`Erreur lors du déchiffrement: ${err.message}`);
+            console.error(err);
+            setError("Erreur de déchiffrement : " + err.message);
         } finally {
             setIsDownloading(false);
         }
     };
 
-    const downloadEncryptedFile = async (url) => {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Erreur de téléchargement');
-        return await response.blob();
-    };
-
     return (
-        <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Télécharger un fichier</h2>
-            
-            <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Scan du QR code de partage
-                </label>
-                <input
-                    type="text"
-                    placeholder="Collez les données du QR code ici"
-                    onChange={(e) => handleQrScan(e.target.value)}
-                    className="w-full p-2 border rounded"
-                />
-            </div>
+        <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-md">
+            <h2 className="text-lg font-bold mb-4 text-center">
+                📷 Scanner le QR code de partage
+            </h2>
 
-            {qrData && (
-                <div className="mb-4 p-3 bg-blue-50 rounded">
-                    <p><strong>Fichier:</strong> {qrData.fileName}</p>
-                    <button
-                        onClick={downloadAndDecrypt}
-                        disabled={isDownloading}
-                        className="w-full bg-green-600 text-white py-2 px-4 rounded mt-2"
-                    >
-                        {isDownloading ? 'Déchiffrement...' : 'Télécharger et Déchiffrer'}
-                    </button>
-                </div>
-            )}
+            {/* ✅ Le composant du scanner */}
+            <QrReader
+                constraints={{ facingMode: "environment" }}
+                onResult={(result, error) => {
+                    if (!!result) {
+                        handleQrScan(result);
+                    }
+                }}
+                style={{ width: "100%" }}
+            />
 
-            {error && <div className="text-red-600">{error}</div>}
+            {isDownloading && <p className="text-blue-600 mt-4">Déchiffrement en cours...</p>}
+            {error && <p className="text-red-600 mt-2">{error}</p>}
         </div>
     );
 };
